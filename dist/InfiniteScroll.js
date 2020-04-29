@@ -407,7 +407,7 @@ var InfiniteScroll = (function(_Component) {
 
 InfiniteScroll.propTypes = {
   children: _propTypes2.default.node.isRequired,
-  element: _propTypes2.default.node,
+  element: _propTypes2.default.elementType,
   hasMore: _propTypes2.default.bool,
   initialLoad: _propTypes2.default.bool,
   isReverse: _propTypes2.default.bool,
@@ -434,4 +434,4 @@ InfiniteScroll.defaultProps = {
   getScrollParent: null
 };
 exports.default = InfiniteScroll;
-module.exports = exports['default'];
+module.exports = exports.default;
