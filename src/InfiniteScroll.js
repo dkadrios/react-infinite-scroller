@@ -1,47 +1,20 @@
+/* eslint-disable mdx/no-unused-expressions */
+/* eslint-disable class-methods-use-this */
+/* eslint-disable react/destructuring-assignment */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 
 export default class InfiniteScroll extends Component {
-  static propTypes = {
-    children: PropTypes.node.isRequired,
-    element: PropTypes.elementType,
-    hasMore: PropTypes.bool,
-    initialLoad: PropTypes.bool,
-    isReverse: PropTypes.bool,
-    loader: PropTypes.node,
-    loadMore: PropTypes.func.isRequired,
-    pageStart: PropTypes.number,
-    ref: PropTypes.func,
-    getScrollParent: PropTypes.func,
-    threshold: PropTypes.number,
-    useCapture: PropTypes.bool,
-    useWindow: PropTypes.bool
-  };
-
-  static defaultProps = {
-    element: 'div',
-    hasMore: false,
-    initialLoad: true,
-    pageStart: 0,
-    ref: null,
-    threshold: 250,
-    useWindow: true,
-    isReverse: false,
-    useCapture: false,
-    loader: null,
-    getScrollParent: null
-  };
-
   constructor(props) {
     super(props);
 
+    this.lastOffsetBeforeRequestingMore = 0;
     this.scrollListener = this.scrollListener.bind(this);
     this.eventListenerOptions = this.eventListenerOptions.bind(this);
     this.mousewheelListener = this.mousewheelListener.bind(this);
   }
 
   componentDidMount() {
-    this.pageLoaded = this.props.pageStart;
     this.options = this.eventListenerOptions();
     this.attachScrollListener();
   }
@@ -63,43 +36,18 @@ export default class InfiniteScroll extends Component {
     this.detachMousewheelListener();
   }
 
-  isPassiveSupported() {
-    let passive = false;
-
-    const testOptions = {
-      get passive() {
-        passive = true;
-      }
-    };
-
-    try {
-      document.addEventListener('test', null, testOptions);
-      document.removeEventListener('test', null, testOptions);
-    } catch (e) {
-      // ignore
-    }
-    return passive;
-  }
-
-  eventListenerOptions() {
-    let options = this.props.useCapture;
-
-    if (this.isPassiveSupported()) {
-      options = {
-        useCapture: this.props.useCapture,
-        passive: true
-      };
-    } else {
-      options = {
-        passive: false
-      };
-    }
-    return options;
-  }
-
-  // Set a defaut loader for all your `InfiniteScroll` components
+  // Set a default loader for all your `InfiniteScroll` components
   setDefaultLoader(loader) {
     this.defaultLoader = loader;
+  }
+
+  getParentElement(el) {
+    const scrollParent =
+      this.props.getScrollParent && this.props.getScrollParent();
+    if (scrollParent != null) {
+      return scrollParent;
+    }
+    return el && el.parentNode;
   }
 
   detachMousewheelListener() {
@@ -133,13 +81,39 @@ export default class InfiniteScroll extends Component {
     );
   }
 
-  getParentElement(el) {
-    const scrollParent =
-      this.props.getScrollParent && this.props.getScrollParent();
-    if (scrollParent != null) {
-      return scrollParent;
+  eventListenerOptions() {
+    let options = this.props.useCapture;
+
+    if (this.isPassiveSupported()) {
+      options = {
+        useCapture: this.props.useCapture,
+        passive: true
+      };
+    } else {
+      options = {
+        passive: false
+      };
     }
-    return el && el.parentNode;
+    return options;
+  }
+
+  isPassiveSupported() {
+    let passive = false;
+
+    const testOptions = {
+      // eslint-disable-next-line getter-return
+      get passive() {
+        passive = true;
+      }
+    };
+
+    try {
+      document.addEventListener('test', null, testOptions);
+      document.removeEventListener('test', null, testOptions);
+    } catch (e) {
+      // ignore
+    }
+    return passive;
   }
 
   filterProps(props) {
@@ -219,10 +193,15 @@ export default class InfiniteScroll extends Component {
       this.detachScrollListener();
       this.beforeScrollHeight = parentNode.scrollHeight;
       this.beforeScrollTop = parentNode.scrollTop;
+
       // Call loadMore after detachScrollListener to allow for non-async loadMore functions
       if (typeof this.props.loadMore === 'function') {
-        this.props.loadMore((this.pageLoaded += 1));
-        this.loadMore = true;
+        if (offset !== this.lastOffsetBeforeRequestingMore) {
+          // console.log(offset, this.props.threshold)
+          this.props.loadMore();
+          this.loadMore = true;
+          this.lastOffsetBeforeRequestingMore = offset;
+        }
       }
     }
   }
@@ -250,17 +229,16 @@ export default class InfiniteScroll extends Component {
     const {
       children,
       element,
+      getScrollParent,
       hasMore,
       initialLoad,
       isReverse,
-      loader,
       loadMore,
-      pageStart,
+      loader,
       ref,
       threshold,
       useCapture,
       useWindow,
-      getScrollParent,
       ...props
     } = renderProps;
 
@@ -284,3 +262,24 @@ export default class InfiniteScroll extends Component {
     return React.createElement(element, props, childrenArray);
   }
 }
+
+InfiniteScroll.propTypes = {
+  hasMore: PropTypes.bool,
+  initialLoad: PropTypes.bool,
+  isReverse: PropTypes.bool,
+  loadMore: PropTypes.func.isRequired,
+  getScrollParent: PropTypes.func,
+  threshold: PropTypes.number,
+  useCapture: PropTypes.bool,
+  useWindow: PropTypes.bool
+};
+
+InfiniteScroll.defaultProps = {
+  hasMore: false,
+  initialLoad: true,
+  threshold: 250,
+  useWindow: true,
+  isReverse: false,
+  useCapture: false,
+  getScrollParent: null
+};
