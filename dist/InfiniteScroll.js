@@ -79,7 +79,9 @@ function _inherits(subClass, superClass) {
     Object.setPrototypeOf
       ? Object.setPrototypeOf(subClass, superClass)
       : (subClass.__proto__ = superClass);
-}
+} /* eslint-disable mdx/no-unused-expressions */
+/* eslint-disable class-methods-use-this */
+/* eslint-disable react/destructuring-assignment */
 
 var InfiniteScroll = (function(_Component) {
   _inherits(InfiniteScroll, _Component);
@@ -95,6 +97,7 @@ var InfiniteScroll = (function(_Component) {
       )
     );
 
+    _this.lastOffsetBeforeRequestingMore = 0;
     _this.scrollListener = _this.scrollListener.bind(_this);
     _this.eventListenerOptions = _this.eventListenerOptions.bind(_this);
     _this.mousewheelListener = _this.mousewheelListener.bind(_this);
@@ -105,7 +108,6 @@ var InfiniteScroll = (function(_Component) {
     {
       key: 'componentDidMount',
       value: function componentDidMount() {
-        this.pageLoaded = this.props.pageStart;
         this.options = this.eventListenerOptions();
         this.attachScrollListener();
       }
@@ -130,51 +132,24 @@ var InfiniteScroll = (function(_Component) {
         this.detachScrollListener();
         this.detachMousewheelListener();
       }
-    },
-    {
-      key: 'isPassiveSupported',
-      value: function isPassiveSupported() {
-        var passive = false;
 
-        var testOptions = {
-          get passive() {
-            passive = true;
-          }
-        };
-
-        try {
-          document.addEventListener('test', null, testOptions);
-          document.removeEventListener('test', null, testOptions);
-        } catch (e) {
-          // ignore
-        }
-        return passive;
-      }
-    },
-    {
-      key: 'eventListenerOptions',
-      value: function eventListenerOptions() {
-        var options = this.props.useCapture;
-
-        if (this.isPassiveSupported()) {
-          options = {
-            useCapture: this.props.useCapture,
-            passive: true
-          };
-        } else {
-          options = {
-            passive: false
-          };
-        }
-        return options;
-      }
-
-      // Set a defaut loader for all your `InfiniteScroll` components
+      // Set a default loader for all your `InfiniteScroll` components
     },
     {
       key: 'setDefaultLoader',
       value: function setDefaultLoader(loader) {
         this.defaultLoader = loader;
+      }
+    },
+    {
+      key: 'getParentElement',
+      value: function getParentElement(el) {
+        var scrollParent =
+          this.props.getScrollParent && this.props.getScrollParent();
+        if (scrollParent != null) {
+          return scrollParent;
+        }
+        return el && el.parentNode;
       }
     },
     {
@@ -213,14 +188,42 @@ var InfiniteScroll = (function(_Component) {
       }
     },
     {
-      key: 'getParentElement',
-      value: function getParentElement(el) {
-        var scrollParent =
-          this.props.getScrollParent && this.props.getScrollParent();
-        if (scrollParent != null) {
-          return scrollParent;
+      key: 'eventListenerOptions',
+      value: function eventListenerOptions() {
+        var options = this.props.useCapture;
+
+        if (this.isPassiveSupported()) {
+          options = {
+            useCapture: this.props.useCapture,
+            passive: true
+          };
+        } else {
+          options = {
+            passive: false
+          };
         }
-        return el && el.parentNode;
+        return options;
+      }
+    },
+    {
+      key: 'isPassiveSupported',
+      value: function isPassiveSupported() {
+        var passive = false;
+
+        var testOptions = {
+          // eslint-disable-next-line getter-return
+          get passive() {
+            passive = true;
+          }
+        };
+
+        try {
+          document.addEventListener('test', null, testOptions);
+          document.removeEventListener('test', null, testOptions);
+        } catch (e) {
+          // ignore
+        }
+        return passive;
       }
     },
     {
@@ -312,10 +315,15 @@ var InfiniteScroll = (function(_Component) {
           this.detachScrollListener();
           this.beforeScrollHeight = parentNode.scrollHeight;
           this.beforeScrollTop = parentNode.scrollTop;
+
           // Call loadMore after detachScrollListener to allow for non-async loadMore functions
           if (typeof this.props.loadMore === 'function') {
-            this.props.loadMore((this.pageLoaded += 1));
-            this.loadMore = true;
+            if (offset !== this.lastOffsetBeforeRequestingMore) {
+              // console.log(offset, this.props.threshold)
+              this.props.loadMore();
+              this.loadMore = true;
+              this.lastOffsetBeforeRequestingMore = offset;
+            }
           }
         }
       }
@@ -351,31 +359,29 @@ var InfiniteScroll = (function(_Component) {
 
         var children = renderProps.children,
           element = renderProps.element,
+          getScrollParent = renderProps.getScrollParent,
           hasMore = renderProps.hasMore,
           initialLoad = renderProps.initialLoad,
           isReverse = renderProps.isReverse,
-          loader = renderProps.loader,
           loadMore = renderProps.loadMore,
-          pageStart = renderProps.pageStart,
+          loader = renderProps.loader,
           ref = renderProps.ref,
           threshold = renderProps.threshold,
           useCapture = renderProps.useCapture,
           useWindow = renderProps.useWindow,
-          getScrollParent = renderProps.getScrollParent,
           props = _objectWithoutProperties(renderProps, [
             'children',
             'element',
+            'getScrollParent',
             'hasMore',
             'initialLoad',
             'isReverse',
-            'loader',
             'loadMore',
-            'pageStart',
+            'loader',
             'ref',
             'threshold',
             'useCapture',
-            'useWindow',
-            'getScrollParent'
+            'useWindow'
           ]);
 
         props.ref = function(node) {
@@ -405,33 +411,26 @@ var InfiniteScroll = (function(_Component) {
   return InfiniteScroll;
 })(_react.Component);
 
+exports.default = InfiniteScroll;
+
 InfiniteScroll.propTypes = {
-  children: _propTypes2.default.node.isRequired,
-  element: _propTypes2.default.elementType,
   hasMore: _propTypes2.default.bool,
   initialLoad: _propTypes2.default.bool,
   isReverse: _propTypes2.default.bool,
-  loader: _propTypes2.default.node,
   loadMore: _propTypes2.default.func.isRequired,
-  pageStart: _propTypes2.default.number,
-  ref: _propTypes2.default.func,
   getScrollParent: _propTypes2.default.func,
   threshold: _propTypes2.default.number,
   useCapture: _propTypes2.default.bool,
   useWindow: _propTypes2.default.bool
 };
+
 InfiniteScroll.defaultProps = {
-  element: 'div',
   hasMore: false,
   initialLoad: true,
-  pageStart: 0,
-  ref: null,
   threshold: 250,
   useWindow: true,
   isReverse: false,
   useCapture: false,
-  loader: null,
   getScrollParent: null
 };
-exports.default = InfiniteScroll;
 module.exports = exports.default;
